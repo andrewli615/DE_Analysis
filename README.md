@@ -1,1 +1,1 @@
-Filters pre-computed DESeq2 differential expression results from GSE224240 (sub-MIC tobramycin vs untreated E. coli K-12 MG1655) to identify significantly upregulated gene candidates. Filters for log2FoldChange > 2 and padj < 0.05, sorts by fold change, and exports ranked candidate list to CSV for downstream promoter annotation.
+
