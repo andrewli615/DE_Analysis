@@ -1,0 +1,4 @@
+index,baseMean,log2FoldChange,FoldChange,pvalue,padj,log10_padj,Dbxref,Name,gbkey,gene,gene_biotype,gene_synonym,locus_tag
+gene-b3542,474.5,2.891,7.419,6.522e-08,3.86e-06,5.413,"ASAP:ABE-0011570,ECOCYC:EG12626,GeneID:948064",dppC,Gene,dppC,protein_coding,ECK3529,b3542
+gene-b1746,792.6,2.529,5.77,3.216e-05,0.0006548,3.184,"ASAP:ABE-0005820,ECOCYC:G6942,GeneID:946260",astD,Gene,astD,protein_coding,"ECK1744,ydjU",b1746
+gene-b1302,144.1,2.193,4.573,1.204e-11,2.137e-09,8.67,"ASAP:ABE-0004380,ECOCYC:G6646,GeneID:945446",puuE,Gene,puuE,protein_coding,"ECK1297,goaG",b1302
