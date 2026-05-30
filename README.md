@@ -6,17 +6,18 @@ for use as biosensor components. Upregulated genes are candidates for cloning
 upstream of a GFP reporter by wet lab.
 
 ## Repository Structure
-DE_Analysis/
-├── aminoglycoside/
-│   ├── filter.py
-│   ├── filter_tr_untr.py
-│   ├── mapping.py
-│   └── compare.py
-└── caz_kan_DE/
-├── mapping.py
-├── deseq2_caz.py
-├── deseq2_kan.py
-└── plots_and_crossreactivity.py
+
+**aminoglycoside/**
+- `filter.py` — filters GSE224240 for upregulated genes
+- `filter_tr_untr.py` — fold change comparison for GSE228373
+- `mapping.py` — maps ER3413 gene IDs to standard names
+- `compare.py` — cross-references tobramycin and gentamicin candidates
+
+**caz_kan_DE/**
+- `mapping.py` — extracts b-number to gene name mapping from GTF
+- `deseq2_caz.py` — DESeq2 analysis for ceftazidime vs control
+- `deseq2_kan.py` — DESeq2 analysis for kanamycin vs control
+- `plots_and_crossreactivity.py` — volcano plots and cross-reactivity check
 
 ## Datasets
 | Dataset | Antibiotic | Strain | Samples | Notes |
