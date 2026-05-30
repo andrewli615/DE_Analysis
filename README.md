@@ -55,12 +55,10 @@ pip install pydeseq2 pandas matplotlib numpy
 ## Key Findings
 **Beta-lactam (ceftazidime)**
 - 112 primary candidates (log2FC > 2), strong SOS response signal
-- Best candidate: recA — specific to beta-lactam, well characterized, commonly used in iGEM biosensors
 - dgcZ, lipA — specific to ceftazidime, strong signal
 
 **Aminoglycoside (kanamycin)**
 - 896 primary candidates, broad transcriptional response
-- Best candidate: ibpB — specific to kanamycin, responds to aminoglycoside ribosomal stress
 - 60 genes cross-reactive between ceftazidime and kanamycin — avoided as promoter candidates
 
 ## Notes
