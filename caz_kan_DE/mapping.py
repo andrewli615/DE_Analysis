@@ -1,0 +1,15 @@
+import gzip
+import re
+import pandas as pd
+
+mapping = {}
+with gzip.open('ecoli_k12.gtf.gz', 'rt') as f:
+    for line in f:
+        gene_id = re.search(r'gene_id "([^"]+)"', line)
+        gene = re.search(r'gene "([^"]+)"', line)
+        if gene_id and gene:
+            mapping[gene_id.group(1)] = gene.group(1)
+
+pd.DataFrame(list(mapping.items()), columns=['gene_id', 'gene']).to_csv(
+    'gene_mapping.csv', index=False)
+print(f"Mapped {len(mapping)} genes")
