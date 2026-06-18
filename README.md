@@ -1,67 +1,130 @@
-# Promoter Selection — Differential Expression Analysis
+# Promoter Selection Differential Expression Analysis
 
 ## Goal
-Identify E. coli promoters activated by aminoglycoside and beta-lactam antibiotics 
-for use as biosensor components. Upregulated genes are candidates for cloning 
-upstream of a GFP reporter by wet lab.
+Identify E. coli promoters activated by aminoglycoside and beta-lactam
+antibiotics for use as biosensor components.
 
-## Repository Structure
+## Directory Structure
 
-**aminoglycoside/**
-- `filter.py` — filters GSE224240 for upregulated genes
-- `filter_tr_untr.py` — fold change comparison for GSE228373
-- `mapping.py` — maps ER3413 gene IDs to standard names
-- `compare.py` — cross-references tobramycin and gentamicin candidates
+```text
+data/
+  aminoglycoside/
+    aminoglycoside_candidates.csv   # tracked fallback input for tobramycin
+  caz_kan/
+    GSE220559_RAW.tar               # tracked raw count archive
 
-**caz_kan_DE/**
-- `mapping.py` — extracts b-number to gene name mapping from GTF
-- `deseq2_caz.py` — DESeq2 analysis for ceftazidime vs control
-- `deseq2_kan.py` — DESeq2 analysis for kanamycin vs control
-- `plots_and_crossreactivity.py` — volcano plots and cross-reactivity check
+scripts/
+  aminoglycoside/
+    filter.py
+    filter_tr_untr.py
+    mapping.py
+    compare.py
+    summarize.py
+  caz_kan/
+    mapping.py
+    deseq2_caz.py
+    deseq2_kan.py
+    summarize.py
+    interactive_plot.py
 
-## Datasets
-| Dataset | Antibiotic | Strain | Samples | Notes |
-|---------|-----------|--------|---------|-------|
-| GSE224240 | Tobramycin (sub-MIC) | E. coli K-12 MG1655 | 12 | Pre-computed DESeq2 results |
-| GSE228373 | Gentamicin | E. coli JM109 | 2 | No replicates, fold change only |
-| GSE220559 | Ceftazidime + Kanamycin | E. coli K-12 MG1655 | 33 | 3 replicates, full DESeq2 pipeline |
+outputs/
+  aminoglycoside/                   # regenerated locally, git-ignored
+    final/
+    intermediate/
+  caz_kan/                          # regenerated locally, git-ignored
+    final/
+      detailed_lists/
+    intermediate/
+    plots/
+    scratch/
+```
 
-## Analysis 1 — Aminoglycoside (aminoglycoside/)
-Analyzed GSE224240 (tobramycin) and GSE228373 (gentamicin). Cross-referencing 
-gave 3 overlapping candidates (dppC, astD, puuE) but all were metabolic genes. 
-Known stress response promoters (marA, recA, cpxP) were downregulated — consistent 
-with known aminoglycoside ribosomal stress mechanism.
+`outputs/` is intentionally ignored by git. Delete it any time you want to run
+the analysis from scratch.
 
-### Scripts
-- `filter.py` — filters GSE224240 for upregulated genes (log2FC > 2, padj < 0.05)
-- `filter_tr_untr.py` — fold change comparison for GSE228373 (no replicates)
-- `mapping.py` — maps ER3413 gene IDs to standard names using GTF annotation
-- `compare.py` — cross-references tobramycin and gentamicin candidate lists
+## Dependencies
 
-## Analysis 2 — Beta-Lactam & Aminoglycoside (caz_kan_DE/)
-Analyzed GSE220559 using full DESeq2 pipeline with 3 replicates per condition.
-Ceftazidime (beta-lactam) and kanamycin (aminoglycoside) vs water control.
+```bash
+python3 -m pip install pandas numpy pydeseq2 matplotlib plotly openpyxl
+```
 
-### Scripts
-Run in this order:
-1. `mapping.py` — extracts b-number to gene name mapping from E. coli K-12 GTF
-2. `deseq2_caz.py` — DESeq2 analysis for ceftazidime vs control
-3. `deseq2_kan.py` — DESeq2 analysis for kanamycin vs control
-4. `plots_and_crossreactivity.py` — volcano plots and cross-reactivity check
+`matplotlib` and `plotly` are only needed for plots. Use `--no-plots` when you
+only want CSV summaries.
 
-### Dependencies
-pip install pydeseq2 pandas matplotlib numpy
+## Run CAZ/KAN Analysis
 
-## Key Findings
-**Beta-lactam (ceftazidime)**
-- 112 primary candidates (log2FC > 2), strong SOS response signal
-- dgcZ, lipA — specific to ceftazidime, strong signal
+From the repository root:
 
-**Aminoglycoside (kanamycin)**
-- 896 primary candidates, broad transcriptional response
-- 60 genes cross-reactive between ceftazidime and kanamycin — avoided as promoter candidates
+```bash
+python3 scripts/caz_kan/mapping.py
+python3 scripts/caz_kan/deseq2_caz.py
+python3 scripts/caz_kan/deseq2_kan.py
+python3 scripts/caz_kan/summarize.py --no-plots
+```
 
-## Notes
-- Datasets use K-12 MG1655
-- Raw data: GSE224240, GSE228373, GSE220559 available on GEO
-- GTF annotation: E. coli K-12 MG1655 GCF_000005845.2 from NCBI
+Main readable output:
+
+```text
+outputs/caz_kan/final/promoter_summary.csv
+```
+
+Additional regenerated outputs include DESeq result CSVs, per-category promoter
+lists, and optional volcano PNG/HTML plots:
+
+```text
+outputs/caz_kan/intermediate/       # DESeq CSVs and mapping files
+outputs/caz_kan/final/              # one-file readable summary
+outputs/caz_kan/final/detailed_lists/
+outputs/caz_kan/plots/
+outputs/caz_kan/scratch/            # extracted raw archive
+```
+
+The raw GSE220559 archive stays compressed in `data/caz_kan/GSE220559_RAW.tar`.
+The scripts extract it into `outputs/caz_kan/scratch/GSE220559_RAW/` when needed. If
+`data/caz_kan/ecoli_k12.gtf.gz` is absent, `mapping.py` writes an ID-only
+mapping so the pipeline can still run; add the GTF file for named genes.
+
+## Run Aminoglycoside Summary
+
+From the repository root:
+
+```bash
+python3 scripts/aminoglycoside/summarize.py
+```
+
+Main readable output:
+
+```text
+outputs/aminoglycoside/final/promoter_summary.csv
+```
+
+The summary uses `data/aminoglycoside/aminoglycoside_candidates.csv` as a
+fallback tobramycin input. To regenerate aminoglycoside intermediates from raw
+data, place these optional inputs in `data/aminoglycoside/`:
+
+```text
+GSE224240_analysis.xlsx
+GSE228373_RAW/
+ecoli_annotation.gtf
+```
+
+Then run:
+
+```bash
+python3 scripts/aminoglycoside/filter.py
+python3 scripts/aminoglycoside/filter_tr_untr.py
+python3 scripts/aminoglycoside/mapping.py
+python3 scripts/aminoglycoside/compare.py
+python3 scripts/aminoglycoside/summarize.py
+```
+
+## Output Conventions
+
+Promoter summaries classify rows as:
+
+- `upregulated`: `log2FoldChange > 2` and, where available, `padj < 0.05`
+- `downregulated`: `log2FoldChange < -2` and, where available, `padj < 0.05`
+- `not_regulated`: all other rows
+
+Readable summary CSVs round numeric values to two decimal places and sort by
+signal strength.
