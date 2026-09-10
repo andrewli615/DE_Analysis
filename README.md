@@ -15,10 +15,18 @@ data/
   ceftazidime/
     GSE220559_RAW.tar
     standardized/
+  ciprofloxacin/
+    GSE220559_RAW.tar
+    standardized/
   gentamicin/
     GSE44211_RAW.tar
     GSE44211_series_matrix.txt.gz
     GPL3154.annot.gz
+    standardized/
+  kanamycin/
+    standardized/
+  polymixinE/
+    GSE220559_RAW.tar
     standardized/
   tobramycin/
     GSE224240_analysis.xlsx
@@ -34,7 +42,10 @@ outputs/
   amoxicillin_resistant_vs_wt/
   amoxicillin_resistant_amox_vs_wt_amox/
   ceftazidime/
+  ciprofloxacin/
   gentamicin/
+  kanamycin/
+  polymixinE/
   tobramycin/
 ```
 
@@ -81,8 +92,8 @@ The key parameters are:
 name                    # dataset/output folder name
 antibiotic_class        # e.g. aminoglycoside, beta_lactam
 treatment               # antibiotic name
-input_type              # fpkm_matrix, series_matrix, excel_de_results
-                        # tar_gene_tables, expression_matrix, read_counts_csv
+input_type              # tar_processed_text, tar_gene_tables, series_matrix
+                        # excel_de_results, expression_matrix, read_counts_csv
 count_matrix            # read-count CSV for read_counts_csv datasets
 expression_matrix       # FPKM matrix for fpkm_matrix datasets
 archive                 # tar archive for tar_gene_tables datasets
@@ -163,24 +174,28 @@ This ranks promoters by both effect size and statistical confidence.
 
 ## Notes
 
-The current analysis includes four antibiotic sources. The amoxicillin source is
-run as two stronger comparisons because the direct wild-type amoxicillin
-contrast was nearly flat.
+The current configuration contains eight comparisons spanning seven antibiotic
+treatments and four antibiotic classes. The amoxicillin source is run as two
+comparisons because the direct wild-type amoxicillin contrast was nearly flat.
 
 ```text
 amoxicillin resistant 512 vs WT           beta-lactam       GSE47221
 amoxicillin resistant 512 + amox vs WT + amox  beta-lactam  GSE47221
 ceftazidime vs water control              beta-lactam       GSE220559
+ciprofloxacin vs water control            fluoroquinolone   GSE220559
 gentamicin vs control                     aminoglycoside    GSE44211
+kanamycin vs water control                aminoglycoside    GSE220559
+polymyxin E vs water control              polymyxin         GSE220559
 tobramycin vs control                     aminoglycoside    GSE224240
 ```
 
 Amoxicillin uses processed microarray expression tables from a raw tar archive
 and compares resistant strain expression against the matched wild-type condition,
-with and without amoxicillin. Ceftazidime uses raw per-sample read-count tables
-from a tar archive. Gentamicin uses replicate microarray expression values.
-Tobramycin already includes a processed differential expression result sheet, so
-the pipeline standardizes and summarizes that existing result.
+with and without amoxicillin. Ceftazidime, ciprofloxacin, kanamycin, and
+polymyxin E use raw per-sample read-count tables from GSE220559. Gentamicin uses
+replicate microarray expression values. Tobramycin already includes a processed
+differential expression result sheet, so the pipeline standardizes and
+summarizes that existing result.
 
 For datasets without an input adjusted p-value, the pipeline uses Welch t-tests
 across replicate expression/count values and Benjamini-Hochberg adjusted
