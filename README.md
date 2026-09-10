@@ -10,7 +10,7 @@ biosensor design.
 ```text
 data/
   amoxicillin/
-    GSE108190_antibiotics_resistant_mutants.txt.gz
+    GSE47221_RAW.tar
     standardized/
   ceftazidime/
     GSE220559_RAW.tar
@@ -31,7 +31,8 @@ scripts/
   run_analysis.py
 
 outputs/
-  amoxicillin/
+  amoxicillin_resistant_vs_wt/
+  amoxicillin_resistant_amox_vs_wt_amox/
   ceftazidime/
   gentamicin/
   tobramycin/
@@ -154,22 +155,24 @@ This ranks promoters by both effect size and statistical confidence.
 
 ## Notes
 
-The current analysis includes four antibiotic datasets:
+The current analysis includes four antibiotic sources. The amoxicillin source is
+run as two stronger comparisons because the direct wild-type amoxicillin
+contrast was nearly flat.
 
 ```text
-amoxicillin   beta-lactam       GSE108190
-ceftazidime   beta-lactam       GSE220559
-gentamicin    aminoglycoside    GSE44211
-tobramycin    aminoglycoside    GSE224240
+amoxicillin resistant 512 vs WT           beta-lactam       GSE47221
+amoxicillin resistant 512 + amox vs WT + amox  beta-lactam  GSE47221
+ceftazidime vs water control              beta-lactam       GSE220559
+gentamicin vs control                     aminoglycoside    GSE44211
+tobramycin vs control                     aminoglycoside    GSE224240
 ```
 
-Amoxicillin uses a processed FPKM matrix from fluoxetine-induced
-amoxicillin-resistant mutants, so it should be interpreted as a resistance-state
-comparison rather than a direct acute amoxicillin exposure. Ceftazidime uses raw
-per-sample read-count tables from a tar archive. Gentamicin uses replicate
-microarray expression values. Tobramycin already includes a processed
-differential expression result sheet, so the pipeline standardizes and summarizes
-that existing result.
+Amoxicillin uses processed microarray expression tables from a raw tar archive
+and compares resistant strain expression against the matched wild-type condition,
+with and without amoxicillin. Ceftazidime uses raw per-sample read-count tables
+from a tar archive. Gentamicin uses replicate microarray expression values.
+Tobramycin already includes a processed differential expression result sheet, so
+the pipeline standardizes and summarizes that existing result.
 
 For datasets without an input adjusted p-value, the pipeline uses Welch t-tests
 across replicate expression/count values and Benjamini-Hochberg adjusted
