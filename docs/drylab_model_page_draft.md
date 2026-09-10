@@ -488,4 +488,3 @@ biosensor project.
 - [Ceftazidime study GSE220559](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE220559)
 - [Gentamicin study GSE44211](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE44211)
 - [Tobramycin study GSE224240](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE224240)
-

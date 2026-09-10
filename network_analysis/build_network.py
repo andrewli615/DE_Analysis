@@ -195,7 +195,11 @@ def _identity(row: pd.Series, mapping: dict[str, tuple[str, str]]) -> tuple[str,
     return fallback, source_locus or (source_gene_id if _LOCUS_RE.match(source_gene_id) else ""), "source_gene", source_locus
 
 
-def _normalize_regulation(row: pd.Series, fc_threshold: float) -> str:
+def _normalize_regulation(
+    row: pd.Series,
+    fc_threshold: float,
+    padj_threshold: float,
+) -> str:
     raw = _clean(row.get("regulation"))
     if raw in {"upregulated", "up", "induced"}:
         return "upregulated"
@@ -204,7 +208,12 @@ def _normalize_regulation(row: pd.Series, fc_threshold: float) -> str:
     if raw in {"not_regulated", "not regulated", "ns", "none"}:
         fc = pd.to_numeric(row.get("log2FoldChange"), errors="coerce")
         padj = pd.to_numeric(row.get("padj"), errors="coerce")
-        if pd.notna(fc) and pd.notna(padj) and padj <= 0.05 and abs(fc) >= fc_threshold:
+        if (
+            pd.notna(fc)
+            and pd.notna(padj)
+            and padj < padj_threshold
+            and abs(fc) > fc_threshold
+        ):
             return "upregulated" if fc > 0 else "downregulated"
         return "not_regulated"
     fc = pd.to_numeric(row.get("log2FoldChange"), errors="coerce")
@@ -260,8 +269,14 @@ def load_de_results(
         frame["source_locus_tag"] = frame["source_locus_tag"].map(_clean)
         frame["log2FoldChange"] = pd.to_numeric(frame["log2FoldChange"], errors="coerce")
         frame["padj"] = pd.to_numeric(frame["padj"], errors="coerce")
-        frame["regulation"] = frame.apply(lambda row: _normalize_regulation(row, fc_threshold), axis=1)
-        frame["is_significant"] = frame["padj"].le(padj_threshold) & frame["log2FoldChange"].abs().ge(fc_threshold)
+        frame["regulation"] = frame.apply(
+            lambda row: _normalize_regulation(row, fc_threshold, padj_threshold),
+            axis=1,
+        )
+        frame["is_significant"] = (
+            frame["padj"].lt(padj_threshold)
+            & frame["log2FoldChange"].abs().gt(fc_threshold)
+        )
         frame["is_qualifying_direction"] = frame["is_significant"] & (
             frame["regulation"].eq("upregulated")
             if candidate_direction == "upregulated"
@@ -282,9 +297,16 @@ def load_de_results(
     observations = pd.concat(frames, ignore_index=True)
     observations["candidate_seed"] = observations.groupby("canonical_gene")["is_qualifying_direction"].transform("any")
     if top_n and top_n > 0:
-        candidates = observations[observations["candidate_seed"]].drop_duplicates("canonical_gene")
+        candidates = (
+            observations[observations["is_qualifying_direction"]]
+            .groupby(["antibiotic_class", "canonical_gene"], as_index=False)["signal_strength"]
+            .max()
+        )
         keep = set(
-            candidates.sort_values("signal_strength", ascending=False)
+            candidates.sort_values(
+                ["antibiotic_class", "signal_strength", "canonical_gene"],
+                ascending=[True, False, True],
+            )
             .groupby("antibiotic_class", sort=False)
             .head(top_n)["canonical_gene"]
         )

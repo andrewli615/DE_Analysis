@@ -40,6 +40,10 @@ def _section(title: str, value: Any) -> str:
     return f"<b>{html.escape(title)}</b>: {html.escape(_value(value))}<br>"
 
 
+def _edge_arrows(edge_type: str) -> str:
+    return "" if edge_type == "co-imodulon" else "to"
+
+
 def build_tooltip(node: str, data: dict[str, Any]) -> str:
     """Build an escaped tooltip containing graph, evidence, and proxy data."""
 
@@ -73,7 +77,7 @@ def render_graph(graph: nx.DiGraph, output_html: str | Path, title: str = "Regul
         network.add_node(node, label=str(node), title=build_tooltip(str(node), data), color=COLORS.get(group, COLORS["tf"]), shape="dot" if node_type == "regulator" else "ellipse")
     for source, target, data in graph.edges(data=True):
         edge_type = data.get("edge_type", "unknown")
-        network.add_edge(source, target, title=html.escape(_value({"edge_type": edge_type, "source": data.get("source", "")})), color=EDGE_COLORS.get(edge_type, "#718096"), dashes=edge_type == "co-imodulon", arrows="to")
+        network.add_edge(source, target, title=html.escape(_value({"edge_type": edge_type, "source": data.get("source", "")})), color=EDGE_COLORS.get(edge_type, "#718096"), dashes=edge_type == "co-imodulon", arrows=_edge_arrows(edge_type))
     network.set_options("""
     {"interaction":{"hover":true,"navigationButtons":true},"physics":{"stabilization":{"iterations":300}},"edges":{"smooth":{"type":"dynamic"}}}
     """)

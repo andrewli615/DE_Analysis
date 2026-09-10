@@ -25,7 +25,7 @@ except ImportError:  # pragma: no cover
 
 
 CLASS_KEYS = tuple(CLASS_REGISTRY)
-TIER_ORDER = {"conflicted": 0, "limited": 1, "supported": 2, "corroborated": 3}
+TIER_ORDER = {"corroborated": 0, "supported": 1, "limited": 2, "conflicted": 3}
 
 
 def load_graph(path: str | Path) -> nx.DiGraph:

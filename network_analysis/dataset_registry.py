@@ -36,7 +36,15 @@ CLASS_REGISTRY: dict[str, dict[str, Any]] = {
 }
 
 DATASET_CAVEATS: dict[str, str] = {
-    "amoxicillin": "Resistant-mutant/fluoxetine comparison; not a direct wild-type antibiotic exposure.",
+    "amoxicillin_resistant_vs_wt": (
+        "Compares amoxicillin-resistant strain 512 with wild type without acute "
+        "drug exposure; signal may reflect the resistance background rather than induction."
+    ),
+    "amoxicillin_resistant_amox_vs_wt_amox": (
+        "Compares resistant strain 512 with wild type while both receive amoxicillin; "
+        "signal combines genotype and resistance effects under exposure and is not an "
+        "antibiotic-versus-control contrast."
+    ),
     "ceftazidime": "Gene identifiers are supplied as b-number locus tags and require same-release mapping.",
     "gentamicin": "Probe-to-gene annotation contains duplicate symbols; collapse is deterministic and provenance-preserving.",
     "kanamycin": "GSE220559 processed count-table comparison; gene identifiers are supplied as b-number locus tags and require same-release mapping.",

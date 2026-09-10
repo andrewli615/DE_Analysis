@@ -1,5 +1,6 @@
 import hashlib
 import json
+import ssl
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,11 +9,32 @@ import pandas as pd
 import pytest
 
 from network_analysis.build_network import aggregate_candidate_evidence, build_graph, load_de_results, load_identity_mapping
-from network_analysis.dataset_registry import load_dataset_config, version_at_least
+from network_analysis.dataset_registry import dataset_caveats, load_dataset_config, version_at_least
 from network_analysis.score_candidates import annotate_candidates, compute_tf_specificity
 from network_analysis import setup_data
 from network_analysis.setup_data import load_manifest, normalize_gene_product_mapping, sha256_file, validate_manifest
 from network_analysis.i_modulon_analysis import compute_gene_expression_evidence, load_embedded_expression, validate_expression_alignment
+from network_analysis.visualize_network import _edge_arrows
+
+
+def test_ssl_context_verifies_certificates_and_hostnames(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    context = setup_data._ssl_context()
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+
+
+def test_ssl_context_honors_configured_ca_bundle(monkeypatch: pytest.MonkeyPatch):
+    calls: list[str | None] = []
+
+    def create_default_context(*, cafile: str | None = None) -> ssl.SSLContext:
+        calls.append(cafile)
+        return ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    monkeypatch.setenv("SSL_CERT_FILE", "/path/to/project-ca.pem")
+    monkeypatch.setattr(setup_data.ssl, "create_default_context", create_default_context)
+    setup_data._ssl_context()
+    assert calls == ["/path/to/project-ca.pem"]
 
 
 def _write_de(root: Path, dataset: str, rows: list[dict]) -> None:
@@ -55,6 +77,76 @@ def test_direction_modes_preserve_conflicts_and_tobramycin_tier(tmp_path: Path):
     assert "source_row_ids" in evidence.columns
 
 
+def test_candidate_normalization_uses_configured_thresholds(tmp_path: Path):
+    config = {
+        "thresholds": {"log2_fold_change": 2.0, "padj": 0.1},
+        "datasets": [
+            {"name": "amoxicillin", "antibiotic_class": "beta_lactam"},
+        ],
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    _write_de(
+        tmp_path,
+        "amoxicillin",
+        [
+            {
+                "gene": "geneA",
+                "gene_id": "b0001",
+                "log2FoldChange": 3.0,
+                "padj": 0.08,
+                "regulation": "not_regulated",
+            },
+            {
+                "gene": "geneB",
+                "gene_id": "b0002",
+                "log2FoldChange": 2.0,
+                "padj": 0.01,
+                "regulation": "not_regulated",
+            },
+        ],
+    )
+
+    observations = load_de_results(config_path, tmp_path)
+    indexed = observations.set_index("canonical_gene")
+    assert indexed.loc["genea", "regulation"] == "upregulated"
+    assert bool(indexed.loc["genea", "candidate_seed"]) is True
+    assert indexed.loc["geneb", "regulation"] == "not_regulated"
+    assert bool(indexed.loc["geneb", "candidate_seed"]) is False
+
+
+def test_top_n_uses_strongest_signal_per_gene_and_class(tmp_path: Path):
+    config = {
+        "thresholds": {"log2_fold_change": 2.0, "padj": 0.05},
+        "datasets": [
+            {"name": "beta", "antibiotic_class": "beta_lactam"},
+            {"name": "amino", "antibiotic_class": "aminoglycoside"},
+        ],
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    _write_de(
+        tmp_path,
+        "beta",
+        [
+            {"gene": "geneA", "gene_id": "b0001", "log2FoldChange": 3.0, "padj": 0.01, "regulation": "upregulated"},
+            {"gene": "geneB", "gene_id": "b0002", "log2FoldChange": 5.0, "padj": 0.01, "regulation": "upregulated"},
+        ],
+    )
+    _write_de(
+        tmp_path,
+        "amino",
+        [
+            {"gene": "geneA", "gene_id": "b0001", "log2FoldChange": 10.0, "padj": 0.01, "regulation": "upregulated"},
+            {"gene": "geneC", "gene_id": "b0003", "log2FoldChange": 9.0, "padj": 0.01, "regulation": "upregulated"},
+        ],
+    )
+
+    observations = load_de_results(config_path, tmp_path, top_n=1)
+    selected = set(observations.loc[observations["candidate_seed"], "canonical_gene"])
+    assert selected == {"genea", "geneb"}
+
+
 def test_co_imodulon_edges_do_not_score_as_regulators():
     graph = nx.DiGraph()
     graph.add_node("rpoe", node_type="regulator", group="tf", regulator_type="sigma")
@@ -66,6 +158,34 @@ def test_co_imodulon_edges_do_not_score_as_regulators():
     assert scores.iloc[0]["n_total_targets"] == 1
     annotated = annotate_candidates(graph, scores)
     assert annotated.set_index("gene").loc["geneb", "regulators"] == ""
+
+
+def test_candidate_scores_rank_strong_evidence_before_conflicts():
+    graph = nx.DiGraph()
+    for tier in ("limited", "conflicted", "corroborated", "supported"):
+        graph.add_node(
+            tier,
+            node_type="candidate",
+            group="beta_lactam",
+            significant_classes=["beta_lactam"],
+            evidence_tier=tier,
+            max_abs_log2_fold_change=3.0,
+        )
+
+    annotated = annotate_candidates(graph, pd.DataFrame())
+    assert annotated["gene"].tolist() == [
+        "corroborated",
+        "supported",
+        "limited",
+        "conflicted",
+    ]
+
+
+def test_only_regulatory_edges_render_with_arrows():
+    assert _edge_arrows("activates") == "to"
+    assert _edge_arrows("represses") == "to"
+    assert _edge_arrows("dual") == "to"
+    assert _edge_arrows("co-imodulon") == ""
 
 
 def test_extended_antibiotic_classes_are_supported_and_scored(tmp_path: Path):
@@ -104,6 +224,13 @@ def test_dataset_config_rejects_duplicate_names(tmp_path: Path):
     }), encoding="utf-8")
     with pytest.raises(ValueError, match="Duplicate dataset name"):
         load_dataset_config(path)
+
+
+def test_current_amoxicillin_comparisons_have_provenance_caveats():
+    resistant = dataset_caveats("amoxicillin_resistant_vs_wt")
+    exposed = dataset_caveats("amoxicillin_resistant_amox_vs_wt_amox")
+    assert resistant and "resistance background" in resistant[0]
+    assert exposed and "not an antibiotic-versus-control contrast" in exposed[0]
 
 
 def test_expression_contract_retains_basal_induced_and_backgrounds():
@@ -209,6 +336,12 @@ def test_graphql_download_writes_raw_products_lock_and_mapping(tmp_path: Path, m
     assert lock["assets"]["reg"]["source_url"] == "https://example.test/graphql"
     assert (tmp_path / "data/network_gene_mapping.tsv").exists()
     assert "b4053" in (tmp_path / "data/network_gene_mapping.tsv").read_text(encoding="utf-8")
+    assert lock["assets"]["mapping:derived"]["path"] == "data/network_gene_mapping.tsv"
     assert not validate_manifest(manifest, tmp_path, lock=lock, require_lock=True)
     cached_lock = setup_data.download_assets(manifest, tmp_path, lock_path)
     assert cached_lock["assets"]["reg"]["remote_id"] == "r1"
+    (tmp_path / "data/network_gene_mapping.tsv").write_text("modified\n", encoding="utf-8")
+    assert any(
+        "SHA256 mismatch against lock for mapping:derived" in error
+        for error in validate_manifest(manifest, tmp_path, lock=cached_lock, require_lock=True)
+    )

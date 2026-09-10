@@ -11,3 +11,4 @@ data/precise1k/
 .ruff_cache/
 .DS_Store
 .venv/
+.vscode/

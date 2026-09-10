@@ -48,16 +48,14 @@ GRAPHQL_QUERY = """query($fileName: String!) {
 def _ssl_context() -> ssl.SSLContext:
     """Build a verified context, honoring an explicitly configured CA bundle."""
 
-    return ssl._create_unverified_context() # pragma: no cover - allow unverified context for testing
-
-    # cafile = os.environ.get("SSL_CERT_FILE")
-    # if cafile:
-    #     return ssl.create_default_context(cafile=cafile)
-    # try:
-    #     import certifi
-    # except ImportError:  # pragma: no cover - certifi is normally transitive
-    #     return ssl.create_default_context()
-    # return ssl.create_default_context(cafile=certifi.where())
+    cafile = os.environ.get("SSL_CERT_FILE")
+    if cafile:
+        return ssl.create_default_context(cafile=cafile)
+    try:
+        import certifi
+    except ImportError:  # pragma: no cover - certifi is normally transitive
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def sha256_file(path: str | Path) -> str:
@@ -338,6 +336,7 @@ def download_assets(manifest: dict[str, Any], root: str | Path | None = None, lo
     if mapping_asset:
         raw_path = root_path / mapping_asset["path"]
         derived = normalize_gene_product_mapping(raw_path, root_path / mapping_asset["derived_path"], release or str(_asset_release(mapping_asset) or "unknown"))
+        derived["path"] = str(mapping_asset["derived_path"])
         lock_assets[f"{mapping_asset['name']}:derived"] = {"source_asset": mapping_asset["name"], **derived, "retrieved_at": _now()}
     lock = {"schema_version": LOCK_SCHEMA_VERSION, "generated_at": _now(), "assets": lock_assets}
     _atomic_write_json(lock_file, lock)
@@ -377,6 +376,23 @@ def validate_manifest(manifest: dict[str, Any], root: str | Path | None = None, 
                     errors.append(f"SHA256 mismatch against lock for {asset['name']}: {destination}")
                 if destination.stat().st_size != int(record.get("size", destination.stat().st_size)):
                     errors.append(f"Size mismatch against lock for {asset['name']}: {destination}")
+            derived_path = asset.get("derived_path")
+            if derived_path:
+                derived_name = f"{asset['name']}:derived"
+                derived_destination = root_path / str(derived_path)
+                derived_record = lock_assets.get(derived_name)
+                if not derived_destination.exists():
+                    errors.append(f"Missing derived asset {derived_name}: {derived_destination}")
+                elif require_lock and not derived_record:
+                    errors.append(f"Missing lock entry for {derived_name}")
+                elif derived_record:
+                    derived_hash = sha256_file(derived_destination)
+                    if derived_hash.lower() != str(derived_record.get("sha256", "")).lower():
+                        errors.append(f"SHA256 mismatch against lock for {derived_name}: {derived_destination}")
+                    if derived_destination.stat().st_size != int(
+                        derived_record.get("size", derived_destination.stat().st_size)
+                    ):
+                        errors.append(f"Size mismatch against lock for {derived_name}: {derived_destination}")
     model = next((asset for asset in precise_assets if str(asset["kind"]).lower() in {"imodulon", "imodulondb"}), None)
     expression = next((asset for asset in precise_assets if str(asset["kind"]).lower() in {"expression", "imodulon_expression"}), None)
     if model is None or expression is None:

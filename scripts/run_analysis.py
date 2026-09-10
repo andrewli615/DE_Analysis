@@ -17,7 +17,6 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[0]
 OUTPUT_ROOT = REPO_ROOT / "outputs"
 MPL_CACHE_DIR = OUTPUT_ROOT / "_cache" / "matplotlib"
-MPL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(MPL_CACHE_DIR))
 
 
@@ -713,6 +712,7 @@ def fixed_volcano_limits():
 
 
 def write_volcano(dataset, results, plot_dir, plot_limits=None):
+    MPL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     df = volcano_plot_frame(results)
     color_map = {
         "upregulated": "#d62728",

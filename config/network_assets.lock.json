@@ -66,7 +66,7 @@
     },
     "regulondb_k12_gene_mapping:derived": {
       "source_asset": "regulondb_k12_gene_mapping",
-      "path": "C:\\Users\\wxie04\\Desktop\\iGEM\\DE_Analysis.worktrees\\network-analysis-multidataset\\data\\network_gene_mapping.tsv",
+      "path": "data/network_gene_mapping.tsv",
       "sha256": "8c3018d8a20e3c8210d2f43a549482c6efedb4cdfe7602630a4f5d6a8ed9c4e2",
       "size": 392228,
       "rows": 4759,
