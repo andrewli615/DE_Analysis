@@ -115,26 +115,6 @@
       "value_suffix": "readcount"
     },
     {
-      "name": "gentamicin",
-      "antibiotic_class": "aminoglycoside",
-      "treatment": "gentamicin",
-      "input_type": "series_matrix",
-      "series_matrix": "data/gentamicin/GSE44211_series_matrix.txt.gz",
-      "platform_annotation": "data/gentamicin/GPL3154.annot.gz",
-      "raw_archive": "data/gentamicin/GSE44211_RAW.tar",
-      "control_samples": ["GSM1080843", "GSM1080844", "GSM1080845"],
-      "treated_samples": ["GSM1080849", "GSM1080850", "GSM1080851"],
-      "sample_labels": {
-        "GSM1080843": "Control-1",
-        "GSM1080844": "Control-2",
-        "GSM1080845": "Control-3",
-        "GSM1080849": "Gentamicin-1",
-        "GSM1080850": "Gentamicin-2",
-        "GSM1080851": "Gentamicin-3"
-      },
-      "value_scale": "linear"
-    },
-    {
       "name": "polymixinE",
       "antibiotic_class": "polymyxin",
       "treatment": "polymixinE",
