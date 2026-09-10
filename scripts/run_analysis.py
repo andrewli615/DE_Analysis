@@ -88,10 +88,15 @@ def finalize_results(results, dataset, thresholds):
     results = results.copy()
     results["antibiotic_class"] = dataset["antibiotic_class"]
     results["treatment"] = dataset["treatment"]
-    results["comparison"] = results.get(
-        "comparison",
-        f"{dataset['treatment']}_vs_control",
-    )
+    if "comparison" not in results.columns:
+        results["comparison"] = dataset.get(
+            "comparison",
+            f"{dataset['treatment']}_vs_control",
+        )
+    else:
+        results["comparison"] = results["comparison"].fillna(
+            dataset.get("comparison", f"{dataset['treatment']}_vs_control")
+        )
     results["log2FoldChange"] = pd.to_numeric(
         results["log2FoldChange"], errors="coerce")
     results["pvalue"] = pd.to_numeric(results.get("pvalue"), errors="coerce")

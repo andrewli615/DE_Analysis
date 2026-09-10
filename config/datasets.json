@@ -5,46 +5,52 @@
   },
   "datasets": [
     {
-      "name": "amoxicillin",
+      "name": "amoxicillin_resistant_vs_wt",
       "antibiotic_class": "beta_lactam",
-      "treatment": "amoxicillin_resistant_mutant",
-      "comparison": "fluoxetine_30d_amoxicillin_resistant_mutant_vs_control",
-      "input_type": "fpkm_matrix",
-      "expression_matrix": "data/amoxicillin/GSE108190_antibiotics_resistant_mutants.txt.gz",
-      "separator": "\t",
-      "encoding": "latin1",
-      "control_samples": [
-        "FPKM of control-1",
-        "FPKM of control-2",
-        "FPKM of control-3"
-      ],
-      "treated_samples": [
-        "FPKM of Flu30d-Amor-1",
-        "FPKM of Flu30d-Amor-2"
-      ],
-      "sample_groups": {
-        "FPKM of control-1": "control",
-        "FPKM of control-2": "control",
-        "FPKM of control-3": "control",
-        "FPKM of Flu30d-Amor-1": "Flu30d-Amor",
-        "FPKM of Flu30d-Amor-2": "Flu30d-Amor"
-      },
-      "gene_id_column": "Gene",
-      "gene_column": "Gene",
+      "treatment": "amoxicillin",
+      "comparison": "amoxicillin_resistant_512_vs_WT_control",
+      "input_type": "tar_processed_text",
+      "archive": "data/amoxicillin/GSE47221_RAW.tar",
+      "processed_member_pattern": "_processed.txt.gz",
+      "sample_name_regex": "(?P<sample_group>512|WT)_(?P<replicate>[0-9]+)",
+      "control_groups": ["WT"],
+      "treated_groups": ["512"],
+      "gene_id_column": "GENE_NAME",
+      "gene_column": "GENE_NAME",
       "annotation_columns": [
-        "Product",
-        "Note",
-        "Locus",
-        "Protein ID",
-        "COG Class",
-        "COG Annotation",
-        "GeneID",
-        "Protein product",
-        "Protein Length",
-        "Protein name"
+        "SEQ_ID",
+        "FEAT_TYPE",
+        "FUNCTION",
+        "DESCRIPTION",
+        "COMMENTS",
+        "ACCESSION",
+        "MAPLOC"
       ],
-      "sample_aggregation": "mean",
-      "value_scale": "linear"
+      "value_scale": "log2"
+    },
+    {
+      "name": "amoxicillin_resistant_amox_vs_wt_amox",
+      "antibiotic_class": "beta_lactam",
+      "treatment": "amoxicillin",
+      "comparison": "amoxicillin_resistant_512_plus_amoxicillin_vs_WT_plus_amoxicillin",
+      "input_type": "tar_processed_text",
+      "archive": "data/amoxicillin/GSE47221_RAW.tar",
+      "processed_member_pattern": "_processed.txt.gz",
+      "sample_name_regex": "(?P<sample_group>512_amox|WT_amox)_(?P<replicate>[0-9]+)",
+      "control_groups": ["WT_amox"],
+      "treated_groups": ["512_amox"],
+      "gene_id_column": "GENE_NAME",
+      "gene_column": "GENE_NAME",
+      "annotation_columns": [
+        "SEQ_ID",
+        "FEAT_TYPE",
+        "FUNCTION",
+        "DESCRIPTION",
+        "COMMENTS",
+        "ACCESSION",
+        "MAPLOC"
+      ],
+      "value_scale": "log2"
     },
     {
       "name": "ceftazidime",
