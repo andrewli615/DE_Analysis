@@ -1,0 +1,124 @@
+"""Shared dataset and evidence-contract definitions.
+
+This module is intentionally dependency-light.  It is imported by the network
+builder, iModulon annotator, scorer, and tests so that dataset names, class
+keys, caveats, and threshold validation cannot drift between pipeline stages.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+
+CLASS_REGISTRY: dict[str, dict[str, Any]] = {
+    "beta_lactam": {
+        "label": "Beta-lactam",
+        "color": "#2b6cb0",
+        "condition_keywords": ("cef", "mero", "imipenem", "ampicillin", "amoxicillin", "penicillin"),
+    },
+    "aminoglycoside": {
+        "label": "Aminoglycoside",
+        "color": "#c05621",
+        "condition_keywords": ("kan", "tobramycin", "gentamicin", "amikacin", "streptomycin"),
+    },
+    "fluoroquinolone": {
+        "label": "Fluoroquinolone",
+        "color": "#2f855a",
+        "condition_keywords": ("cipro", "ciprofloxacin"),
+    },
+    "polymyxin": {
+        "label": "Polymyxin",
+        "color": "#b7791f",
+        "condition_keywords": ("polymyxin", "polymixin", "colistin"),
+    },
+}
+
+DATASET_CAVEATS: dict[str, str] = {
+    "amoxicillin_resistant_vs_wt": (
+        "Compares amoxicillin-resistant strain 512 with wild type without acute "
+        "drug exposure; signal may reflect the resistance background rather than induction."
+    ),
+    "amoxicillin_resistant_amox_vs_wt_amox": (
+        "Compares resistant strain 512 with wild type while both receive amoxicillin; "
+        "signal combines genotype and resistance effects under exposure and is not an "
+        "antibiotic-versus-control contrast."
+    ),
+    "ceftazidime": "Gene identifiers are supplied as b-number locus tags and require same-release mapping.",
+    "gentamicin": "Probe-to-gene annotation contains duplicate symbols; collapse is deterministic and provenance-preserving.",
+    "kanamycin": "GSE220559 processed count-table comparison; gene identifiers are supplied as b-number locus tags and require same-release mapping.",
+    "ciprofloxacin": "GSE220559 processed count-table comparison; gene identifiers are supplied as b-number locus tags and require same-release mapping.",
+    "polymixinE": "GSE220559 processed count-table comparison; gene identifiers are supplied as b-number locus tags and require same-release mapping.",
+    "tobramycin": "Independent aminoglycoside dataset; evidence is limited when this is the only qualifying dataset.",
+}
+
+REQUIRED_DE_COLUMNS = {"gene", "log2FoldChange", "padj"}
+VALID_CLASSES = set(CLASS_REGISTRY) | {"cross", "tf"}
+
+
+def normalize_version(value: str | None) -> tuple[int, ...] | None:
+    """Return a comparable numeric version tuple, accepting ``14.5``."""
+
+    if value is None:
+        return None
+    text = str(value).strip().lstrip("vV")
+    pieces = text.split(".")
+    if not pieces or any(not piece.isdigit() for piece in pieces):
+        return None
+    return tuple(int(piece) for piece in pieces)
+
+
+def version_at_least(value: str | None, minimum: str) -> bool:
+    actual = normalize_version(value)
+    wanted = normalize_version(minimum)
+    if actual is None or wanted is None:
+        return False
+    padded_actual = actual + (0,) * max(0, len(wanted) - len(actual))
+    padded_wanted = wanted + (0,) * max(0, len(actual) - len(wanted))
+    return padded_actual >= padded_wanted
+
+
+def load_dataset_config(path: str | Path) -> dict[str, Any]:
+    """Load and validate the repository dataset configuration."""
+
+    config_path = Path(path)
+    with config_path.open(encoding="utf-8") as handle:
+        config = json.load(handle)
+    thresholds = config.get("thresholds")
+    datasets = config.get("datasets")
+    if not isinstance(thresholds, dict) or not isinstance(datasets, list) or not datasets:
+        raise ValueError(f"{config_path} must contain non-empty thresholds and datasets")
+    for key in ("log2_fold_change", "padj"):
+        if key not in thresholds:
+            raise ValueError(f"{config_path} thresholds missing {key!r}")
+    names: set[str] = set()
+    for dataset in datasets:
+        if not isinstance(dataset, dict):
+            raise ValueError("Each configured dataset must be an object")
+        for key in ("name", "antibiotic_class"):
+            if not dataset.get(key):
+                raise ValueError(f"Dataset entry missing {key!r}")
+        name = str(dataset["name"])
+        if name in names:
+            raise ValueError(f"Duplicate dataset name: {name}")
+        names.add(name)
+        if dataset["antibiotic_class"] not in CLASS_REGISTRY:
+            raise ValueError(
+                f"Dataset {name} has unsupported antibiotic_class "
+                f"{dataset['antibiotic_class']!r}; expected {sorted(CLASS_REGISTRY)}"
+            )
+    config["_path"] = str(config_path.resolve())
+    return config
+
+
+def configured_datasets_by_class(config: dict[str, Any]) -> dict[str, list[str]]:
+    result = {key: [] for key in CLASS_REGISTRY}
+    for dataset in config["datasets"]:
+        result[dataset["antibiotic_class"]].append(dataset["name"])
+    return result
+
+
+def dataset_caveats(name: str) -> list[str]:
+    caveat = DATASET_CAVEATS.get(name)
+    return [caveat] if caveat else []

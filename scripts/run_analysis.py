@@ -17,7 +17,6 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[0]
 OUTPUT_ROOT = REPO_ROOT / "outputs"
 MPL_CACHE_DIR = OUTPUT_ROOT / "_cache" / "matplotlib"
-MPL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(MPL_CACHE_DIR))
 
 
@@ -88,10 +87,15 @@ def finalize_results(results, dataset, thresholds):
     results = results.copy()
     results["antibiotic_class"] = dataset["antibiotic_class"]
     results["treatment"] = dataset["treatment"]
-    results["comparison"] = results.get(
-        "comparison",
-        f"{dataset['treatment']}_vs_control",
-    )
+    if "comparison" not in results.columns:
+        results["comparison"] = dataset.get(
+            "comparison",
+            f"{dataset['treatment']}_vs_control",
+        )
+    else:
+        results["comparison"] = results["comparison"].fillna(
+            dataset.get("comparison", f"{dataset['treatment']}_vs_control")
+        )
     results["log2FoldChange"] = pd.to_numeric(
         results["log2FoldChange"], errors="coerce")
     results["pvalue"] = pd.to_numeric(results.get("pvalue"), errors="coerce")
@@ -708,6 +712,7 @@ def fixed_volcano_limits():
 
 
 def write_volcano(dataset, results, plot_dir, plot_limits=None):
+    MPL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     df = volcano_plot_frame(results)
     color_map = {
         "upregulated": "#d62728",
